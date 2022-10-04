@@ -1,8 +1,9 @@
 import Service.*;
 import ServiceBureau.ServiceBureau;
-import Threads.ConsoleThread;
+import Threads.ExportFileThread;
+import Threads.FileThread;
+import Threads.ImportFileThread;
 
-import java.io.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.InputMismatchException;
@@ -35,9 +36,8 @@ public class Main {
     }
 
     private static void menu() {
-        //fillServiceBureau();
-        ConsoleThread thread = new ConsoleThread(services_file, serviceBureau);
-        thread.start();
+        ImportFileThread importFileThread = new ImportFileThread(services_file, serviceBureau);
+        importFileThread.start();
         ArrayList<Service> order = new ArrayList<>();
         Scanner scanner = new Scanner(System.in);
         int number;
@@ -48,21 +48,24 @@ public class Main {
                 number = scanner.nextInt();
                 scanner.nextLine();
                 switch (number) {
-                    case 1 -> viewServices(serviceBureau.getServiceList());
-                    case 2 -> orderService(scanner, order);
+                    case 1 -> {
+                        waitThread(importFileThread);
+                        viewServices(serviceBureau.getServiceList());
+                    }
+                    case 2 -> {
+                        waitThread(importFileThread);
+                        orderService(scanner, order);
+                    }
                     case 3 -> viewOrderedServices(order);
                     case 4 -> createService(scanner);
-                    case 5 -> editService(scanner, serviceBureau.getServiceList());
+                    case 5 -> {
+                        waitThread(importFileThread);
+                        editService(scanner, serviceBureau.getServiceList());
+                    }
                     case 6 -> {
                         flag = false;
-                        try {
-                            exportServices();
-                            serviceBureau.getServiceList().clear();
-                        } catch (FileNotFoundException e) {
-                            System.out.println(e.getMessage());
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
+                        ExportFileThread exportFileThread = new ExportFileThread(services_file, serviceBureau);
+                        exportFileThread.start();
                         System.out.println("До свидания!");
                     }
                     default -> System.out.println("Введите целое число в промежутке от 0 до " + (main_menu.length - 1));
@@ -195,6 +198,21 @@ public class Main {
         }
     }
 
+    private static void waitThread(FileThread fileThread) {
+        if (fileThread.isAlive()) {
+            System.out.print("Ожидаем загрузки данных");
+            do {
+                try {
+                    fileThread.join(500);
+                } catch (InterruptedException e) {
+                    System.out.println("Ошибка!");
+                }
+                System.out.print(".");
+            } while (fileThread.isAlive());
+            System.out.println();
+        }
+    }
+
     interface replaceNotLetters {
         String replace(String str);
     }
@@ -225,69 +243,4 @@ public class Main {
             System.out.println((i + 1) + ") " + options[i]);
         }
     }
-
-    /*private static void fillServiceBureau(){
-        try {
-            ArrayList<ArrayList<Service>> listOfImportedServices = importServices();
-            for (ArrayList<Service> services : listOfImportedServices) {
-                for (Service service : services) {
-                    System.out.println("Услуга " + service.getDescription()
-                            + " была импортирована.");
-                }
-                serviceBureau.addService(services);
-            }
-        } catch (IOException | ClassNotFoundException e) {
-            System.out.println(e.getMessage());
-            ArrayList<ArrayList<Service>> services = new ArrayList<>();
-            services.add(new ArrayList<>());
-            services.add(new ArrayList<>());
-            services.add(new ArrayList<>());
-            services.add(new ArrayList<>());
-            serviceBureau.setServiceList(services);
-        }
-    }
-
-    private static ArrayList<ArrayList<Service>> importServices() throws IOException, ClassNotFoundException {
-        FileInputStream fileInputStream = null;
-        System.out.println("Чтение доступных услуг из файла " + services_file);
-        try {
-            File importCardsFile = new File(services_file);
-            fileInputStream = new FileInputStream(importCardsFile);
-            ObjectInputStream inputStream = new ObjectInputStream(fileInputStream);
-            return (ArrayList<ArrayList<Service>>) inputStream.readObject();
-        } finally {
-            try {
-                if (fileInputStream != null) {
-                    fileInputStream.close();
-                }
-            } catch (IOException e) {
-                System.out.println(e.getMessage());
-            }
-        }
-    }
-    */
-    private static void exportServices() throws IOException {
-        FileOutputStream fileOutputStream = null;
-        System.out.println("Запись услуг в файл " + services_file);
-        try {
-            File exportServicesFile = new File(services_file);
-            fileOutputStream = new FileOutputStream(exportServicesFile);
-            ObjectOutputStream outputStream = new ObjectOutputStream(fileOutputStream);
-            outputStream.writeObject(serviceBureau.getServiceList());
-            int sum = 0;
-            for (ArrayList<Service> service : serviceBureau.getServiceList()) {
-                sum += service.size();
-            }
-            System.out.println("Выполнен экспорт " + sum + " услуг в файл");
-        } finally {
-            try {
-                if (fileOutputStream != null) {
-                    fileOutputStream.close();
-                }
-            } catch (IOException e) {
-                System.out.println(e.getMessage());
-            }
-        }
-    }
-
 }
