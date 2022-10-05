@@ -163,6 +163,14 @@ public class Main {
                 default -> System.out.println("Введите целое число в промежутке от 0 до " +
                         (create_menu.length - 1));
             }
+            Runnable ascending = () -> {
+                serviceBureau.getServiceList().get(0).sort(Comparator.comparingInt((Service s) -> s.getPrice()));
+                serviceBureau.getServiceList().get(1).sort(Comparator.comparingInt((Service s) -> s.getPrice()));
+                serviceBureau.getServiceList().get(2).sort(Comparator.comparingInt((Service s) -> s.getPrice()));
+                serviceBureau.getServiceList().get(3).sort(Comparator.comparingInt((Service s) -> s.getPrice()));
+            };
+            Thread ascSort = new Thread(ascending);
+            ascSort.start();
         } catch (InputMismatchException e) {
             System.out.println("Некорректный ввод. Введите целое число");
             scanner.nextLine();
